@@ -1,0 +1,12 @@
+{
+  "name": "demo-e-mapas",
+  "version": "1.0.0",
+  "description": "Demo E: Explorador de funciones de Leaflet/OSM + Mapa de Pedido en Vivo (pedido y mensajero actualizados)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

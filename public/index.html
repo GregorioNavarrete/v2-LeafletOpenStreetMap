@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo E · Mapas: Explorador + Pedido en Vivo</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <header>
+    <a class="volver" href="../../">← Panel de Demos</a>
+    <h1>🗺️ Demo E · Funciones de Mapas + Pedido en Vivo</h1>
+    <p class="sub">Leaflet + OpenStreetMap (gratuitos, sin clave): distancias entre personas, radios de cobertura, medición de rutas, zonas con área, geolocalización y búsqueda de direcciones — y una pestaña que arma el <b>mapa actualizado del pedido</b> (mensajero moviéndose en tiempo real) para un delivery tipo “estilo Rappi/Cabify”.</p>
+    <nav class="tabs">
+      <button class="tabBtn activo" data-tab="explorador">🧪 Explorador de funciones</button>
+      <button class="tabBtn" data-tab="pedido">🛵 Pedido en Vivo</button>
+      <button class="tabBtn" data-tab="info">ℹ️ Info & límites</button>
+    </nav>
+  </header>
+
+  <section id="error" class="oculto"></section>
+
+  <!-- ════════════ PESTAÑA 1: EXPLORADOR ════════════ -->
+  <main id="pestaña-explorador" class="pestana visible">
+    <div class="barraHerramientas">
+      <button id="hPersona" class="htool">📍 Persona</button>
+      <button id="hMedir" class="htool">📏 Medir distancia</button>
+      <button id="hRadio" class="htool">⭕ Radio</button>
+      <button id="hZona" class="htool">🟦 Zona (doble clic cierra)</button>
+      <button id="hYo" class="htool">🧭 Mi ubicación</button>
+      <button id="hLimpiar" class="htool">🗑️ Limpiar</button>
+    </div>
+    <div class="gridMapa">
+      <div id="mapaE"></div>
+      <aside class="lateral">
+        <h3>🔎 Buscar dirección (Nominatim)</h3>
+        <div class="buscador">
+          <input type="text" id="inBuscar" placeholder="ej: Sarmiento 500, La Banda" />
+          <button id="btnBuscar">Ir</button>
+        </div>
+
+        <h3>👥 Personas marcadas</h3>
+        <select id="selPersona1" class="parcial"></select>
+        <span>→ distancia a</span>
+        <select id="selPersona2" class="parcial"></select>
+        <p id="distPar" class="dato grande">—</p>
+        <p id="db" class="ot">Distancia por línea recta (Haversine). Marcá al menos 2 personas en el mapa.</p>
+
+        <h3>🗂️ Distancias de todas contra todas</h3>
+        <table id="tablaDist"><thead><tr><th></th></tr></thead><tbody></tbody></table>
+
+        <h3>⭕ Radios y zonas</h3>
+        <label class="fila"><span>Radio del círculo (m):</span>
+          <input type="number" id="inRadio" value="500" min="50" step="50" />
+        </label>
+        <p id="zonasInfo" class="ot">Activá “Zona” y marcá puntos (doble clic para cerrar el polígono) — se calcula el área en ha.</p>
+        <ul id="listaZonas" class="chico"></ul>
+
+        <h3>📐 Medición de ruta</h3>
+        <p id="medRuta" class="dato">Modo medir apagado</p>
+        <p class="ot">Clic para sumar puntos; la distancia total va sumando tramos hasta desactivar.</p>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ════════════ PESTAÑA 2: PEDIDO EN VIVO ════════════ -->
+  <main id="pestaña-pedido" class="pestana">
+    <div class="gridPedido">
+      <div id="mapaP"></div>
+      <aside class="lateral pedido">
+        <h3>🛵 Tu pedido</h3>
+        <div class="estadoU">
+          <div class="miniAva">🍕</div>
+          <div><b>Milanesa doble · gaseosa 2L</b><p id="lugarResto">Pizzería “La Centro” · Sgo. del Estero</p></div>
+        </div>
+        <p class="chipEstado" id="estadoChip">⏳ Sin pedido simulado</p>
+
+        <ul class="seguimiento" id="pasos">
+          <li data-paso="0" class="hecho">✅ <b>Pedido confirmado</b></li>
+          <li data-paso="1">👨‍🍳 <b>En preparación</b></li>
+          <li data-paso="2">🛵 <b>Cadete en camino</b></li>
+          <li data-paso="3">🏁 <b>Entregado</b></li>
+        </ul>
+
+        <div class="filaDos">
+          <div><span class="miniTitulo">Distancia restante</span><b id="pDist">—</b></div>
+          <div><span class="miniTitulo">ETA</span><b id="pEta">—</b></div>
+        </div>
+        <div class="barra"><div id="pBarra"></div></div>
+
+        <div class="controles">
+          <button id="btnSimular" class="primario">🚀 Iniciar simulación</button>
+          <button id="btnPausa" disabled>⏸ Pausar</button>
+          <button id="btnReset">⟲ Reiniciar</button>
+          <label class="fila"><span>Velocidad cadete:</span><input type="range" id="inVel" min="10" max="60" value="30" step="5" /><b id="velTxt">30 km/h</b></label>
+          <label class="fila"><span>Aceleración simulación:</span><input type="range" id="inAccel" min="1" max="20" value="4" step="1" /><b id="acelTxt">×4</b></label>
+          <label class="fila"><span>Radio de aviso (geocerca):</span><input type="number" id="inCerco" value="400" min="100" step="100" /><span>m</span></label>
+        </div>
+
+        <div id="toasts"></div>
+        <p class="ot chicoInfo">La simulación mueve al cadete 🛵 por una ruta de calles (waypoints reales de Sgo. del Estero) a la velocidad elegida. Cuando entra al radio de geocerca se dispara la notificación — mecánica idéntica a la de una app de delivery real, con datos mockeados.</p>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ════════════ PESTAÑA 3: INFO ════════════ -->
+  <main id="pestaña-info" class="pestana">
+    <section class="infoBox">
+      <h3>¿Qué usamos y por qué?</h3>
+      <ul>
+        <li><b>Leaflet 1.9.4</b> — librería de mapas open-source (BSD-2). Corre 100% en el navegador; este panel usa sus <b>marcadores arrastrables, popups, líneas, círculos, polígonos, capas, escala, fitBounds, eventos</b>.</li>
+        <li><b>OpenStreetMap</b> — tiles gratuitos (© colaboradores de OSM). Alternativa de capa: Esri World Imagery (satelital, uso libre no comercial) y Carto Clarity.</li>
+        <li><b>Nominatim</b> — geocodificador oficial de OSM para la búsqueda de direcciones. Política de uso: máx. 1 consulta/segundo, sin clave. Para producción seria se recomienda un provedor con SLA (Photon, Mapbox,HERE) — la interfaz de esta demo queda igual.</li>
+        <li><b>Haversine</b> — distancia línea recta entre 2 puntos esféricos (fórmula estándar; la usa también para el ETA).</li>
+        <li><b>Área del polígono</b> — fórmula esférica de L'Huilier / shoelace adaptada a coordenadas geográficas (suma de triángulos).</li>
+        <li><b>Ojo:</b> la distancia “en calle” (routing) no está acá: para eso usarías <b>OSRM</b> (gratuito, servidor público demo) o Graphhopper. La ruta del cadete se simula con waypoints a mano por el hardware de la demo.</li>
+      </ul>
+      <h4>Dónde entra esto en la apps de delivery reales</h4>
+      <ul>
+        <li><b>Marcadores y popups</b> → repartidor/pedido/cliente en el mapa.</li>
+        <li><b>Círculos</b> → zona de cobertura con reparto gratuito, geocercas de aviso “está llegando”.</li>
+        <li><b>Polilíneas medición</b> → ruta del cadete + km a cobrar.</li>
+        <li><b>Nominatim/geocoder</b> → autocompletar dirección al armar el pedido.</li>
+        <li><b>fitBounds</b> → encuadrar el viaje (cadete + cliente) nice-to-have.</li>
+        <li><b>WebSocket (en real)</b> → las posiciones del cadete vendrían por push; acá se simulan con un tick de 250 ms.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>Panel de Demos · NASA Space Apps 2026 · Santiago del Estero (14–15 nov)</footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+  <script>window.addEventListener('load', () => { if (window.initMapas) window.initMapas(); });</script>
+</body>
+</html>
